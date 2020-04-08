@@ -128,7 +128,7 @@ class GeneratorHubInterface(nn.Module):
     def sample(self, sentences: List[str], beam: int = 1, verbose: bool = False, **kwargs) -> List[str]:
         if isinstance(sentences, str):
             return self.sample([sentences], beam=beam, verbose=verbose, **kwargs)[0]
-        tokenized_sentences = [self.encode(sentence) for sentence in sentences]
+        tokenized_sentences = [self.encode(sentence, append_eos=False) for sentence in sentences]
         batched_hypos = self.generate(tokenized_sentences, beam, verbose, **kwargs)
         return [self.decode(hypos[0]['tokens']) for hypos in batched_hypos]
 
@@ -193,10 +193,10 @@ class GeneratorHubInterface(nn.Module):
                         ))
         return outputs
 
-    def encode(self, sentence: str) -> torch.LongTensor:
+    def encode(self, sentence: str, append_eos: bool=True) -> torch.LongTensor:
         sentence = self.tokenize(sentence)
         sentence = self.apply_bpe(sentence)
-        return self.binarize(sentence)
+        return self.binarize(sentence, append_eos)
 
     def decode(self, tokens: torch.LongTensor) -> str:
         sentence = self.string(tokens)
@@ -223,8 +223,8 @@ class GeneratorHubInterface(nn.Module):
             sentence = self.bpe.decode(sentence)
         return sentence
 
-    def binarize(self, sentence: str) -> torch.LongTensor:
-        return self.src_dict.encode_line(sentence, add_if_not_exist=False).long()
+    def binarize(self, sentence: str, append_eos: bool) -> torch.LongTensor:
+        return self.src_dict.encode_line(sentence, add_if_not_exist=False, append_eos=append_eos).long()
 
     def string(self, tokens: torch.LongTensor) -> str:
         return self.tgt_dict.string(tokens)
